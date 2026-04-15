@@ -1,0 +1,92 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
+}
+
+// Esquema Gold - Esquema en Estrella (Conexion Verificada - hacia falta por eso fallaba el backend)
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  schemas  = ["raw", "clean", "gold"]
+}
+
+// Tabla de fechas (Completa)
+model DimDate {
+  date_id   DateTime @id @db.Date
+  day       Int
+  month     Int
+  year      Int
+  quarter   Int
+  is_weekend Boolean
+
+  fact_sales FactSales[]
+
+  @@map("dim_date")
+  @@schema("gold")
+}
+
+// Tabla de clientes (Completa)
+model DimCustomer {
+  customer_id       String @id
+  customer_unique_id String
+  customer_zip_code  String
+  customer_city     String
+  customer_state    String
+
+  fact_sales FactSales[]
+
+  @@map("dim_customer")
+  @@schema("gold")
+}
+
+// Tabla de productos (Completa)
+model DimProduct {
+  product_id             String  @id
+  product_category_name  String?
+  product_weight_g       Float?
+  product_length_cm      Float?
+  product_height_cm      Float?
+  product_width_cm       Float?
+
+  fact_sales FactSales[]
+
+  @@map("dim_product")
+  @@schema("gold")
+}
+
+// Tabla de ordenes (Corregida)
+model DimOrder {
+  order_id            String @id
+  order_status        String
+  order_purchase_timestamp DateTime
+  order_approved_at     DateTime?
+  order_delivered_carrier_date DateTime?
+  order_delivered_customer_date DateTime?
+  order_estimated_delivery_date DateTime
+
+  fact_sales FactSales[]
+
+  @@map("dim_order")
+  @@schema("gold")
+}
+
+// Tabla de ventas (Completa)
+model FactSales {
+  order_item_id String @id // ID único
+  order_id      String
+  product_id    String
+  customer_id   String
+  date_id       DateTime @db.Date
+  
+  price         Float
+  freight_value  Float
+  payment_value Float // Valor de pago tipo Float (corregido)
+  
+  order    DimOrder    @relation(fields: [order_id], references: [order_id])
+  product  DimProduct  @relation(fields: [product_id], references: [product_id])
+  customer DimCustomer @relation(fields: [customer_id], references: [customer_id])
+  date     DimDate     @relation(fields: [date_id], references: [date_id])
+
+  @@map("fact_sales")
+  @@schema("gold")
+}
